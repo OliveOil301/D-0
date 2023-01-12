@@ -3,7 +3,8 @@
     // for the documentation about the extensions.json format
     "recommendations": [
         "platformio.platformio-ide",
-        "aaron-bond.better-comments"
+        "aaron-bond.better-comments",
+        "esbenp.prettier-vscode"
     ],
     "unwantedRecommendations": [
         "ms-vscode.cpptools-extension-pack"

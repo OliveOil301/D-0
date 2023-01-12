@@ -67,12 +67,15 @@ static const unsigned char PROGMEM D0_bmp[] =
 
 
 
-//____________________________________________________________________
-//Controller variables------------------------------------------------
-//These variables store the most recent state of each button, joystick, or potentiometer
-//each loop of the controller, the inputs are checked against these numbers.
-//If there is a difference (if the user has changed something), the 
-//controller will send an updated data packet to the robot
+//*____________________________________________________________________
+//*Controller variables------------------------------------------------
+/**
+ * These variables store the most recent state of each button, joystick, or potentiometer
+ * each loop of the controller, the inputs are checked against these numbers.
+ * each loop of the controller, the inputs are checked against these numbers.
+ * If there is a difference (if the user has changed something), the 
+ * controller will send an updated data packet to the robot
+**/
 
 //_______________________
 // Left Side------------
@@ -86,6 +89,9 @@ int LScroll = 0;// Left Scroll Wheel
 
 bool LTriggerPressed = false;// Left Trigger
 
+bool LOtherButton = false;// Left button above joystick
+
+
 //_______________________
 // Right Side------------
 
@@ -96,37 +102,52 @@ int RJoystickDeadzone = 20;//The deadzone on the x and y axis
 
 int RScroll = 0;// Right Scroll Wheel
 
-bool RTriggerPressed = false;//Right Trigger
+bool RTriggerPressed = false;// Right Trigger
 
+bool ROtherButton = false;// Right button above joystick
 
+//_______________________
+// Other ----------------
+int controllerState = 0;
+// 0 = Driving Mode
+// 1 = Pose Mode
 
-
+//*____________________________________________________________________
+//*Screen and Menu variables------------------------------------------------
+/**
+ * These variables store the states of the screen, battery, and other UI things
+**/
+enum screenState{
+  MAIN_MENU,
+  BATTERY_LOW,
+  SOUND_SELECTION
+};
 
 void setup() {
   // put your setup code here, to run once:
 
   Serial.begin(9600);
 
-  //_________________________________________________________________________
-  // initializing the SSD1306 OLED Display ---------------------------
+  //*_________________________________________________________________________
+  //* Initializing the SSD1306 OLED Display ---------------------------
 
   Serial.print(F("[SSD1306 OLED] Initializing - Start "));
   if(!display.begin(SSD1306_SWITCHCAPVCC)) {
     Serial.println(F("[SSD1306 OLED] Initializing - Failed"));
-    while(true);//Stop the program here
+    while(true);//Stop the program here since we got an error
   } else{
     Serial.println(F("[SSD1306 OLED] Initializing - Sucessful"));
   }
 
   display.display();//The display is initialized to display the Adafruit splash screen
-  delay(1000);//Show that for 2 seconds
+  delay(1000);//Show that for 1 second
   display.clearDisplay();
   display.drawBitmap(0, 0, D0_bmp, 32, 32, 1);//Draw D-0
   //Display some text describing the project - a title?
   display.display();
 
-  //_________________________________________________________________________
-  // Initializing the NRF24L01+ radio module ---------------------------
+  //*_________________________________________________________________________
+  //* Initializing the NRF24L01+ radio module ---------------------------
   Serial.print(F("[NRF24L01+] Initializing - Start "));
   radioState = radio.begin();
   if(radioState == RADIOLIB_ERR_NONE) {//If we don't have an error Initializing
@@ -134,7 +155,7 @@ void setup() {
   } else {
     Serial.print(F("[NRF24L01+] Initializing - Failed: Error code "));
     Serial.println(radioState);
-    while(true); //Stop the program here
+    while(true); //Stop the program here since we got an error
   }
 
   byte addr[] = {0x01, 0x23, 0x45, 0x67, 0x89};
@@ -145,7 +166,7 @@ void setup() {
   } else {
     Serial.print(F("[nRF24] Setting transmit pipe - Failed: Error code "));
     Serial.println(radioState);
-    while(true);//Stop the program here
+    while(true);//Stop the program here since we got an error
   }
 
 }

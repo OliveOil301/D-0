@@ -15,7 +15,7 @@
 // CE pin:    3
 //TODO: Make sure these connections are right
 nRF24 radio = new Module(10, 2, 3);
-int radioState = 0; //This is used to store the state of the transceiver during various funciton calls
+int radioState = 0; //This is used to store the state of the transceiver during various funciton calls - for debugging
 
 
 //Setting up the OLED Display module:
@@ -64,6 +64,41 @@ static const unsigned char PROGMEM D0_bmp[] =
 0b00000000, 0b00001100, 0b00001100, 0b00000000,
 0b00000000, 0b00000011, 0b11110000, 0b00000000
 };
+
+
+
+//____________________________________________________________________
+//Controller variables------------------------------------------------
+//These variables store the most recent state of each button, joystick, or potentiometer
+//each loop of the controller, the inputs are checked against these numbers.
+//If there is a difference (if the user has changed something), the 
+//controller will send an updated data packet to the robot
+
+//_______________________
+// Left Side------------
+
+// Left Joystick
+int LJoystickx = 512;
+int LJoystick1y = 512;
+int LJoystickDeadzone = 20;//The deadzone on the x and y axis
+
+int LScroll = 0;// Left Scroll Wheel
+
+bool LTriggerPressed = false;// Left Trigger
+
+//_______________________
+// Right Side------------
+
+// Right joystick
+int RJoystick2x = 512;
+int RJoystick2y = 512;
+int RJoystickDeadzone = 20;//The deadzone on the x and y axis
+
+int RScroll = 0;// Right Scroll Wheel
+
+bool RTriggerPressed = false;//Right Trigger
+
+
 
 
 
@@ -117,4 +152,8 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+
+
+
+
 }

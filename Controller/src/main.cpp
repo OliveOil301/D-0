@@ -82,13 +82,12 @@ static const unsigned char PROGMEM D0_bmp[] =
 
 // Left Joystick
 int LJoystickx = 512;
-int LJoystick1y = 512;
+int LJoysticky = 512;
 int LJoystickDeadzone = 20;//The deadzone on the x and y axis
-
+bool LJoystickButtonPressed = false;
 int LScroll = 0;// Left Scroll Wheel
-
 bool LTriggerPressed = false;// Left Trigger
-
+bool LBumperPressed = false;// Left Bumper
 bool LOtherButton = false;// Left button above joystick
 
 
@@ -96,14 +95,13 @@ bool LOtherButton = false;// Left button above joystick
 // Right Side------------
 
 // Right joystick
-int RJoystick2x = 512;
-int RJoystick2y = 512;
+int RJoystickx = 512;
+int RJoysticky = 512;
 int RJoystickDeadzone = 20;//The deadzone on the x and y axis
-
+bool RJoystickButtonPressed = false;
 int RScroll = 0;// Right Scroll Wheel
-
 bool RTriggerPressed = false;// Right Trigger
-
+bool RBumperPressed = false;// Right Bumper
 bool ROtherButton = false;// Right button above joystick
 
 //_______________________
@@ -123,6 +121,63 @@ enum screenState{
   SOUND_SELECTION
 };
 
+//*____________________________________________________________________
+//*Radio Communication stuff & variables-------------------------------
+/**
+ * These variables are set up to do the radio communication
+**/
+struct Remote_Data_Packet
+{
+  byte j1X;
+  byte j1Y;
+  byte j2X;
+  byte j2Y;
+
+  byte scrollWheels;// first 4 bits are devoted to the left wheel selected value,
+  // last 4 are devoted to the right scroll wheel
+
+  byte buttonsA;
+  //The button presses are stored in the following order:
+  // Bit 0: LJoystick, 
+  // Bit 1: LOther, 
+  // Bit 2: LTrigger, 
+  // Bit 3: LBumper, 
+  // Bit 4: RJoystick, 
+  // Bit 5: ROther, 
+  // Bit 6: RTrigger, 
+  // Bit 7: RBumper
+  // Example: 10010110 would mean the following:
+  // left joystick, left bumper, right other and right trigger buttons are pressed
+  
+  byte buttonsB;
+  //This stores other buttons and any other functionality that may be added
+  // Bit 0: center button
+  // Bit 1: n/a
+  // Bit 2: n/a
+  // Bit 3: n/a
+  // Bit 4: n/a 
+  // Bit 5: n/a 
+  // Bit 6: n/a 
+  // Bit 7: n/a
+
+
+  byte other; 
+  // 8 bits devoted to other functionality:
+  // Bit 0: Request robot battery level
+  // Bit 1: n/a 
+  // Bit 2: n/a 
+  // Bit 3: n/a 
+  // Bit 4: n/a 
+  // Bit 5: n/a 
+  // Bit 6: n/a 
+  // Bit 7: n/a
+};
+
+Remote_Data_Packet dataPacket; // The data package that we're going to send
+
+
+
+
 void setup() {
   // put your setup code here, to run once:
 
@@ -130,7 +185,6 @@ void setup() {
 
   //*_________________________________________________________________________
   //* Initializing the SSD1306 OLED Display ---------------------------
-
   Serial.print(F("[SSD1306 OLED] Initializing - Start "));
   if(!display.begin(SSD1306_SWITCHCAPVCC)) {
     Serial.println(F("[SSD1306 OLED] Initializing - Failed"));

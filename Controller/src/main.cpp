@@ -228,6 +228,32 @@ bool inputsHaveChanged(){
 
 }
 
+/** fills the dataPacket object with the cuttent controller inputs so it is ready to send
+ * replaces all inputs
+ * should only be used if inputsHaveChanged() returns true so the robot isn't spammed with
+ * data
+ * @return none - the dataPacket object that is filled is a global variable
+*/
+void fillDataPacket(){
+  //Fill Left joystick x,y
+
+  //Fill Right joystick x,y
+
+  //Fill buttonsA byte
+
+  //Fill buttonsB byte
+
+
+}
+
+/** sends the data packet to the reciever on the robot using the transciever in the remote
+ * @return true if it was sent successfully
+*/
+bool sendDataPacket(){
+
+}
+
+
 void setup() {
   // put your setup code here, to run once:
 

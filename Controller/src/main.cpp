@@ -83,7 +83,9 @@ static const unsigned char PROGMEM D0_bmp[] =
 // Left Joystick
 int LJoystickx = 512;
 int LJoysticky = 512;
-int LJoystickDeadzone = 20;//The deadzone on the x and y axis
+#define LJoystickDeadzone 10 //The deadzone on the x and y axis
+#define LJoystickCenterx 512 //The center position on the x axis
+#define LJoystickCentery 512 //The center position on the y axis
 bool LJoystickButtonPressed = false;
 int LScroll = 0;// Left Scroll Wheel
 bool LTriggerPressed = false;// Left Trigger
@@ -97,7 +99,9 @@ bool LOtherButton = false;// Left button above joystick
 // Right joystick
 int RJoystickx = 512;
 int RJoysticky = 512;
-int RJoystickDeadzone = 20;//The deadzone on the x and y axis
+#define RJoystickDeadzone 10 //The deadzone on the x and y axis
+#define RJoystickCenterx 512 //The center position on the x axis
+#define RJoystickCentery 512 //The center position on the y axis
 bool RJoystickButtonPressed = false;
 int RScroll = 0;// Right Scroll Wheel
 bool RTriggerPressed = false;// Right Trigger
@@ -106,6 +110,7 @@ bool ROtherButton = false;// Right button above joystick
 
 //_______________________
 // Other ----------------
+bool centerButtonPressed = false;
 int controllerState = 0;
 // 0 = Driving Mode
 // 1 = Pose Mode
@@ -128,10 +133,10 @@ enum screenState{
 **/
 struct Remote_Data_Packet
 {
-  byte j1X;
-  byte j1Y;
-  byte j2X;
-  byte j2Y;
+  byte LJx;
+  byte LJy;
+  byte RJx;
+  byte RJy;
 
   byte scrollWheels;// first 4 bits are devoted to the left wheel selected value,
   // last 4 are devoted to the right scroll wheel
@@ -177,9 +182,55 @@ Remote_Data_Packet dataPacket; // The data package that we're going to send
 
 
 
+/** Checks if the inputs have changed and updates them if they have
+ * Takes no input
+ * @return true if something has changed, false if everything is same as before
+*/
+bool inputsHaveChanged(){
+
+  //Left Joystick:
+  if(!(abs(LJoystickx-LJoystickCenterx)<= LJoystickDeadzone) && LJoystickx != dataPacket.LJx){//If the Left joystick x axis isn't within the deadzone and has changed position
+    return true;
+  }
+  if(!(abs(LJoysticky-LJoystickCentery)<= LJoystickDeadzone) && LJoysticky != dataPacket.LJy){//If the Left joystick x axis isn't within the deadzone and has changed position
+    return true;
+  }
+
+  //Right Joystick:
+  if(!(abs(RJoystickx-RJoystickCenterx) <= RJoystickDeadzone) && RJoystickx != dataPacket.RJx){//If the Left joystick x axis isn't within the deadzone and has changed position
+    return true;
+  }
+  if(!(abs(RJoysticky-RJoystickCentery) <= RJoystickDeadzone) && RJoysticky != dataPacket.RJy){//If the Left joystick x axis isn't within the deadzone and has changed position
+    return true;
+  }
+
+  //Buttons:
+  
+  //button A byte
+  byte currentButtonAPresses = (byte)LJoystickButtonPressed<<7 + (byte)LOtherButton<<6 
+  + (byte)LTriggerPressed<<5 + (byte)LBumperPressed<<4 + (byte)RJoystickButtonPressed<<3
+  + (byte)ROtherButton<<2 + (byte)RTriggerPressed<<1 + (byte)RBumperPressed;
+
+  if(currentButtonAPresses != dataPacket.buttonsA){
+    return true;
+  }
+
+  //buttonB byte
+  byte currentButtonBPresses = (byte)centerButtonPressed;
+
+  if(currentButtonBPresses != dataPacket.buttonsB){
+    return true;
+  }
+
+  //Otherwise, everything is the same so we
+  return false;
+  //because no inputs have changed
+
+}
 
 void setup() {
   // put your setup code here, to run once:
+
 
   Serial.begin(9600);
 
@@ -227,6 +278,17 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+
+  //read the inputs and set all our variables
+
+  //Check the inputs against our last packet to see if any have changed
+
+  //update the screen
+  //If we're changing the mode, take care of that
+  //The sound scroll/button stuff
+
+  
+  //if the inputs have changed, send a new packet to the robot
 
 
 

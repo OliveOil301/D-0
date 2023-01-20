@@ -259,6 +259,32 @@ int getLeftScrollValue(){
   return getSelectedScrollValue(analogRead(LScrollIn), LMinScrollValue, LMaxScrollValue, LNumSelectableScrollValues);
 }
 
+/**readInputs()
+ * reads all the button and analog inputs and sets their respective variables to 
+ * their current values
+*/
+void readInputs(){
+  LJoystickx = analogRead(LJoystickxIn);
+  LJoysticky = analogRead(LJoystickyIn);
+  LJoystickButtonPressed = !digitalRead(LJoystickButtonIn);//Since HIGH == not pressed, we need to flip it.
+  LScroll = getLeftScrollValue();
+  LTriggerPressed = !digitalRead(LTriggerIn);
+  LBumperPressed = !digitalRead(LBumperIn);
+  LOtherButton = !digitalRead(LOtherButtonIn);
+
+  RJoystickx = analogRead(RJoystickxIn);
+  RJoysticky = analogRead(RJoystickyIn);
+  RJoystickButtonPressed = !digitalRead(RJoystickButtonIn);//Since HIGH == not pressed, we need to flip it.
+  RScroll = getRightScrollValue();
+  RTriggerPressed = !digitalRead(RTriggerIn);
+  RBumperPressed = !digitalRead(RBumperIn);
+  ROtherButton = !digitalRead(ROtherButtonIn);
+
+  centerButtonPressed = !digitalRead(CenterButtonIn);
+}
+
+
+
 /** Checks if the inputs have changed and updates them if they have
  * Takes no input
  * @return true if something has changed, false if everything is same as before
@@ -408,6 +434,30 @@ void setup() {
   radio.openWritingPipe(recieverAddress);
   radio.stopListening();//Set module as transmitter
   printDebugMessage("[NRF24L01+] Initializing - Sucessful");
+
+
+
+  
+  //*_________________________________________________________________________
+  //* Setting up all input pins ----------------------------------------------
+  pinMode(LJoystickxIn, INPUT);
+  pinMode(LJoystickyIn, INPUT);
+  pinMode(LJoystickButtonIn, INPUT_PULLUP);
+  pinMode(LScrollIn, INPUT);
+  pinMode(LTriggerIn, INPUT_PULLUP);
+  pinMode(LBumperIn, INPUT_PULLUP);
+  pinMode(LOtherButtonIn, INPUT_PULLUP);
+
+  pinMode(RJoystickxIn, INPUT);
+  pinMode(RJoystickyIn, INPUT);
+  pinMode(RJoystickButtonIn, INPUT_PULLUP);
+  pinMode(RScrollIn, INPUT);
+  pinMode(RTriggerIn, INPUT_PULLUP);
+  pinMode(RBumperIn, INPUT_PULLUP);
+  pinMode(ROtherButtonIn, INPUT_PULLUP);
+
+  pinMode(CenterButtonIn, INPUT_PULLUP);
+
   
 }
 

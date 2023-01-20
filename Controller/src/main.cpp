@@ -307,7 +307,6 @@ bool inputsHaveChanged(){
     return true;
   }
 
-
   //Buttons:--------------------
   //button A byte
   byte currentButtonAPresses = (byte)LJoystickButtonPressed<<7 + (byte)LOtherButton<<6 

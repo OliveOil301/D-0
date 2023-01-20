@@ -131,25 +131,23 @@ static const unsigned char PROGMEM D0_bmp[] =
 #define RJoystickCenterx 512 //The center position on the x axis
 #define RJoystickCentery 512 //The center position on the y axis
 
+#define minWaitBetweenPacketTransmissions 10 //number of milliseconds to wait between packet transmissions so we don't spam the reciever
+//This might not be necessary but I threw it in just in case. We can lower it if we want
+
+long unsigned int lastTransmission = 0; //Stores the last transmission time in ms
 
 //______________________
 // Left Side------------
-
-// Left Joystick
 int LJoystickx = 512;
 int LJoysticky = 512;
-
 bool LJoystickButtonPressed = false;
 int LScroll = 0;// Left Scroll Wheel selected value (0-7) // TODO make sure we have 8 selectable values
 bool LTriggerPressed = false;// Left Trigger
 bool LBumperPressed = false;// Left Bumper
 bool LOtherButton = false;// Left button above joystick
 
-
 //_______________________
 // Right Side------------
-
-// Right joystick
 int RJoystickx = 512;
 int RJoysticky = 512;
 bool RJoystickButtonPressed = false;
@@ -161,9 +159,6 @@ bool ROtherButton = false;// Right button above joystick
 //_______________________
 // Other ----------------
 bool centerButtonPressed = false;
-int controllerState = 0;
-// 0 = Driving Mode
-// 1 = Pose Mode
 
 //*____________________________________________________________________
 //*Screen and Menu variables------------------------------------------------
@@ -230,7 +225,6 @@ struct Remote_Data_Packet
 
 Remote_Data_Packet dataPacket; // The data package that we're going to send
 
-
 /** printDebugMessage(String message)
  * prints a message to the serial console only if debugMode is defined to true
  * Otherwise, nothing happens to ensure code runs quickly
@@ -252,11 +246,11 @@ int getSelectedScrollValue(int scrollAnalogValue, int minScrollValue, int maxScr
 }
 
 int getRightScrollValue(){
-  return getSelectedScrollValue(analogRead(RScrollIn), RMinScrollValue, RMaxScrollValue, RNumSelectableScrollValues);
+  return getSelectedScrollValue(RScroll, RMinScrollValue, RMaxScrollValue, RNumSelectableScrollValues);
 }
 
 int getLeftScrollValue(){
-  return getSelectedScrollValue(analogRead(LScrollIn), LMinScrollValue, LMaxScrollValue, LNumSelectableScrollValues);
+  return getSelectedScrollValue(LScroll, LMinScrollValue, LMaxScrollValue, LNumSelectableScrollValues);
 }
 
 /**readInputs()
@@ -308,9 +302,7 @@ bool inputsHaveChanged(){
   }
 
   //Scroll Wheels:--------------
-  int currentLeftIndex = getLeftScrollValue();
-  int currentRightIndex = getRightScrollValue();
-  byte currentScrollWheels = (byte)currentLeftIndex<<4 + currentRightIndex;
+  byte currentScrollWheels = (byte)LScroll<<4 + RScroll;
   if(currentScrollWheels != dataPacket.scrollWheels){
     return true;
   }
@@ -369,9 +361,7 @@ void fillDataPacket(){
   }
 
   //Fill scroll wheels
-  int currentLeftIndex = getLeftScrollValue();
-  int currentRightIndex = getRightScrollValue();
-  dataPacket.scrollWheels = (byte)currentLeftIndex<<4 + currentRightIndex;
+  dataPacket.scrollWheels = (byte)LScroll<<4 + RScroll;
 
   //Fill buttonsA byte
   dataPacket.buttonsA = (byte)LJoystickButtonPressed<<7 + (byte)LOtherButton<<6 
@@ -403,9 +393,9 @@ bool sendDataPacket(){
 
 void setup() {
   // put your setup code here, to run once:
-
-
-  Serial.begin(9600);
+  if(debugMode){
+    Serial.begin(9600);
+  }
 
   //*_________________________________________________________________________
   //* Initializing the SSD1306 OLED Display ---------------------------
@@ -465,17 +455,16 @@ void loop() {
   // put your main code here, to run repeatedly:
 
   //read the inputs and set all our variables
+  readInputs();
 
   //Check the inputs against our last packet to see if any have changed
+  if(inputsHaveChanged() && abs(millis()-lastTransmission)>=minWaitBetweenPacketTransmissions){
+    fillDataPacket();
+    sendDataPacket();
+  }
 
   //update the screen
   //If we're changing the mode, take care of that
   //The sound scroll/button stuff
-
-  
-  //if the inputs have changed, send a new packet to the robot
-
-
-
 
 }

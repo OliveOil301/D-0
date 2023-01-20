@@ -236,13 +236,36 @@ bool inputsHaveChanged(){
 */
 void fillDataPacket(){
   //Fill Left joystick x,y
+  if(abs(LJoystickx-LJoystickCenterx)<= LJoystickDeadzone){//if the joystick is within the deadzone
+    dataPacket.LJx = LJoystickCenterx; //just send the center point for that axis
+  } else{//if it's not within the deadzone
+    dataPacket.LJx = LJoystickx;
+  }
+  if(abs(LJoysticky-LJoystickCentery)<= LJoystickDeadzone){//if the joystick is within the deadzone
+    dataPacket.LJy = LJoystickCentery; //just send the center point for that axis
+  } else{//if it's not within the deadzone
+    dataPacket.LJy = LJoysticky;
+  }
 
   //Fill Right joystick x,y
+  if(abs(RJoystickx-RJoystickCenterx)<= RJoystickDeadzone){//if the joystick is within the deadzone
+    dataPacket.RJx = RJoystickCenterx; //just send the center point for that axis
+  } else{//if it's not within the deadzone
+    dataPacket.RJx = RJoystickx;
+  }
+  if(abs(RJoysticky-RJoystickCentery)<= RJoystickDeadzone){//if the joystick is within the deadzone
+    dataPacket.RJy = RJoystickCentery; //just send the center point for that axis
+  } else{//if it's not within the deadzone
+    dataPacket.RJy = RJoysticky;
+  }
 
   //Fill buttonsA byte
+  dataPacket.buttonsA = (byte)LJoystickButtonPressed<<7 + (byte)LOtherButton<<6 
+  + (byte)LTriggerPressed<<5 + (byte)LBumperPressed<<4 + (byte)RJoystickButtonPressed<<3
+  + (byte)ROtherButton<<2 + (byte)RTriggerPressed<<1 + (byte)RBumperPressed;
 
   //Fill buttonsB byte
-
+  dataPacket.buttonsB = (byte)centerButtonPressed;
 
 }
 

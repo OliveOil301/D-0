@@ -1,5 +1,9 @@
 #include <Arduino.h>
-#include <RadioLib.h>
+
+//libraries for the Transmitter
+#include <nRF24L01.h>
+#include <RF24.h>
+
 
 //libraries for the OLED display
 #include <SPI.h>
@@ -8,15 +12,20 @@
 #include <Adafruit_SSD1306.h>
 
 
+//this is used to enable/disable serial printing of error & success messages
+//false = nothing is printed to the console
+//true = stuff is printed
+#define debugMode false
+
+
 // Setting up the NRF24L01+ radio transceiver module:
 // nRF24 has the following connections:
-// CS pin:    10
-// IRQ pin:   2
+// CSN pin:    10
 // CE pin:    3
 //TODO: Make sure these connections are right
-nRF24 radio = new Module(10, 2, 3);
+RF24 radio(3, 10);
 int radioState = 0; //This is used to store the state of the transceiver during various funciton calls - for debugging
-
+unsigned char recieverAddress[] = {0x01, 0x23, 0x45, 0x67, 0x89};
 
 //Setting up the OLED Display module:
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -133,15 +142,15 @@ enum screenState{
 **/
 struct Remote_Data_Packet
 {
-  byte LJx;
-  byte LJy;
-  byte RJx;
-  byte RJy;
+  uint8_t LJx;
+  uint8_t LJy;
+  uint8_t RJx;
+  uint8_t RJy;
 
-  byte scrollWheels;// first 4 bits are devoted to the left wheel selected value,
+  uint8_t scrollWheels;// first 4 bits are devoted to the left wheel selected value,
   // last 4 are devoted to the right scroll wheel
 
-  byte buttonsA;
+  uint8_t buttonsA;
   //The button presses are stored in the following order:
   // Bit 0: LJoystick, 
   // Bit 1: LOther, 
@@ -154,7 +163,7 @@ struct Remote_Data_Packet
   // Example: 10010110 would mean the following:
   // left joystick, left bumper, right other and right trigger buttons are pressed
   
-  byte buttonsB;
+  uint8_t buttonsB;
   //This stores other buttons and any other functionality that may be added
   // Bit 0: center button
   // Bit 1: n/a
@@ -166,7 +175,7 @@ struct Remote_Data_Packet
   // Bit 7: n/a
 
 
-  byte other; 
+  uint8_t other; 
   // 8 bits devoted to other functionality:
   // Bit 0: Request robot battery level
   // Bit 1: n/a 
@@ -181,6 +190,15 @@ struct Remote_Data_Packet
 Remote_Data_Packet dataPacket; // The data package that we're going to send
 
 
+/** printDebugMessage(String message)
+ * prints a message to the serial console only if debugMode is defined to true
+ * Otherwise, nothing happens to ensure code runs quickly
+*/
+void printDebugMessage(String message){
+  if(debugMode){
+    Serial.println(message);
+  }
+}
 
 /** Checks if the inputs have changed and updates them if they have
  * Takes no input
@@ -207,7 +225,7 @@ bool inputsHaveChanged(){
   //Buttons:
   
   //button A byte
-  byte currentButtonAPresses = (byte)LJoystickButtonPressed<<7 + (byte)LOtherButton<<6 
+  uint8_t currentButtonAPresses = (byte)LJoystickButtonPressed<<7 + (byte)LOtherButton<<6 
   + (byte)LTriggerPressed<<5 + (byte)LBumperPressed<<4 + (byte)RJoystickButtonPressed<<3
   + (byte)ROtherButton<<2 + (byte)RTriggerPressed<<1 + (byte)RBumperPressed;
 
@@ -216,7 +234,7 @@ bool inputsHaveChanged(){
   }
 
   //buttonB byte
-  byte currentButtonBPresses = (byte)centerButtonPressed;
+  uint8_t currentButtonBPresses = (byte)centerButtonPressed;
 
   if(currentButtonBPresses != dataPacket.buttonsB){
     return true;
@@ -267,13 +285,23 @@ void fillDataPacket(){
   //Fill buttonsB byte
   dataPacket.buttonsB = (byte)centerButtonPressed;
 
+  dataPacket.other = (byte)0;
+
 }
 
 /** sends the data packet to the reciever on the robot using the transciever in the remote
- * @return true if it was sent successfully
+ * @return true if it was sent successfully, false if the transmission failed
 */
 bool sendDataPacket(){
-
+  bool sucessfulTransmission = radio.write(&dataPacket, sizeof(dataPacket));
+  
+  if (sucessfulTransmission) {
+    // the packet was successfully transmitted
+  } else {
+    // the packet was not sucessfully transmitted
+    printDebugMessage("[NRF24L01+] package send failed ");
+  }
+  return sucessfulTransmission;
 }
 
 
@@ -287,10 +315,10 @@ void setup() {
   //* Initializing the SSD1306 OLED Display ---------------------------
   Serial.print(F("[SSD1306 OLED] Initializing - Start "));
   if(!display.begin(SSD1306_SWITCHCAPVCC)) {
-    Serial.println(F("[SSD1306 OLED] Initializing - Failed"));
+    printDebugMessage("[SSD1306 OLED] Initializing - Failed");
     while(true);//Stop the program here since we got an error
   } else{
-    Serial.println(F("[SSD1306 OLED] Initializing - Sucessful"));
+    printDebugMessage("[SSD1306 OLED] Initializing - Sucessful");
   }
 
   display.display();//The display is initialized to display the Adafruit splash screen
@@ -302,27 +330,15 @@ void setup() {
 
   //*_________________________________________________________________________
   //* Initializing the NRF24L01+ radio module ---------------------------
-  Serial.print(F("[NRF24L01+] Initializing - Start "));
-  radioState = radio.begin();
-  if(radioState == RADIOLIB_ERR_NONE) {//If we don't have an error Initializing
-    Serial.println(F("[NRF24L01+] Initializing - Sucessful"));
-  } else {
-    Serial.print(F("[NRF24L01+] Initializing - Failed: Error code "));
-    Serial.println(radioState);
-    while(true); //Stop the program here since we got an error
-  }
-
-  byte addr[] = {0x01, 0x23, 0x45, 0x67, 0x89};
-  Serial.print(F("[nRF24] Setting transmit pipe - Start "));
-  radioState = radio.setTransmitPipe(addr);
-  if(radioState == RADIOLIB_ERR_NONE) { //If we don't have an error setting the address
-    Serial.println(F("[nRF24] Setting transmit pipe - Sucessful"));
-  } else {
-    Serial.print(F("[nRF24] Setting transmit pipe - Failed: Error code "));
-    Serial.println(radioState);
+  printDebugMessage("[NRF24L01+] Initializing - Start ");
+  if (!radio.begin()) {
+    printDebugMessage("[NRF24L01+] Initializing - Failed");
     while(true);//Stop the program here since we got an error
   }
-
+  radio.openWritingPipe(recieverAddress);
+  radio.stopListening();//Set module as transmitter
+  printDebugMessage("[NRF24L01+] Initializing - Sucessful");
+  
 }
 
 void loop() {

@@ -74,6 +74,35 @@ static const unsigned char PROGMEM D0_bmp[] =
 0b00000000, 0b00000011, 0b11110000, 0b00000000
 };
 
+//*____________________________________________________________________
+//*Pin Definitions-----------------------------------------------------
+/**
+ * All the pin locations are stored here. the only references to pin locations 
+ * used in this code should reference the variables in this section.
+ * If there is not yet a definition for a pin, it should be added here
+*/
+
+//TODO: actually select all these pin locaitons
+#define LScrollIn 12
+#define RScrollIn 12
+
+#define LJoystickxIn 12
+#define LJoystickyIn 12
+#define LJoystickButtonIn 12
+#define LTriggerIn 12
+#define LBumperIn 12
+#define LOtherButtonIn 12
+
+#define RJoystickxIn 12
+#define RJoystickyIn 12
+#define RJoystickButtonIn 12
+#define RTriggerIn 12
+#define RBumperIn 12
+#define ROtherButtonIn 12
+
+#define CenterButtonIn 12
+
+
 
 
 //*____________________________________________________________________
@@ -86,17 +115,32 @@ static const unsigned char PROGMEM D0_bmp[] =
  * controller will send an updated data packet to the robot
 **/
 
-//_______________________
+//______________________________________
+// Configuration Definitions------------
+#define LNumSelectableScrollValues 8 //Can be NO MORE than 16 since the right and left index share a byte during transmission
+#define LMaxScrollValue 1010
+#define LMinScrollValue 10//When the dial is turned to the min/max allowed position, what is the analog value?
+#define RNumSelectableScrollValues 8
+#define RMaxScrollValue 1010
+#define RMinScrollValue 10
+
+#define LJoystickDeadzone 10 //The deadzone on the x and y axis
+#define LJoystickCenterx 512 //The center position on the x axis
+#define LJoystickCentery 512 //The center position on the y axis
+#define RJoystickDeadzone 10 //The deadzone on the x and y axis
+#define RJoystickCenterx 512 //The center position on the x axis
+#define RJoystickCentery 512 //The center position on the y axis
+
+
+//______________________
 // Left Side------------
 
 // Left Joystick
 int LJoystickx = 512;
 int LJoysticky = 512;
-#define LJoystickDeadzone 10 //The deadzone on the x and y axis
-#define LJoystickCenterx 512 //The center position on the x axis
-#define LJoystickCentery 512 //The center position on the y axis
+
 bool LJoystickButtonPressed = false;
-int LScroll = 0;// Left Scroll Wheel
+int LScroll = 0;// Left Scroll Wheel selected value (0-7) // TODO make sure we have 8 selectable values
 bool LTriggerPressed = false;// Left Trigger
 bool LBumperPressed = false;// Left Bumper
 bool LOtherButton = false;// Left button above joystick
@@ -108,11 +152,8 @@ bool LOtherButton = false;// Left button above joystick
 // Right joystick
 int RJoystickx = 512;
 int RJoysticky = 512;
-#define RJoystickDeadzone 10 //The deadzone on the x and y axis
-#define RJoystickCenterx 512 //The center position on the x axis
-#define RJoystickCentery 512 //The center position on the y axis
 bool RJoystickButtonPressed = false;
-int RScroll = 0;// Right Scroll Wheel
+int RScroll = 0;// Right Scroll Wheel selected value (0-7) // TODO make sure we have 8 selectable values
 bool RTriggerPressed = false;// Right Trigger
 bool RBumperPressed = false;// Right Bumper
 bool ROtherButton = false;// Right button above joystick
@@ -142,15 +183,15 @@ enum screenState{
 **/
 struct Remote_Data_Packet
 {
-  uint8_t LJx;
-  uint8_t LJy;
-  uint8_t RJx;
-  uint8_t RJy;
+  byte LJx;
+  byte LJy;
+  byte RJx;
+  byte RJy;
 
-  uint8_t scrollWheels;// first 4 bits are devoted to the left wheel selected value,
+  byte scrollWheels;// first 4 bits are devoted to the left wheel selected value,
   // last 4 are devoted to the right scroll wheel
 
-  uint8_t buttonsA;
+  byte buttonsA;
   //The button presses are stored in the following order:
   // Bit 0: LJoystick, 
   // Bit 1: LOther, 
@@ -163,7 +204,7 @@ struct Remote_Data_Packet
   // Example: 10010110 would mean the following:
   // left joystick, left bumper, right other and right trigger buttons are pressed
   
-  uint8_t buttonsB;
+  byte buttonsB;
   //This stores other buttons and any other functionality that may be added
   // Bit 0: center button
   // Bit 1: n/a
@@ -175,7 +216,7 @@ struct Remote_Data_Packet
   // Bit 7: n/a
 
 
-  uint8_t other; 
+  byte other; 
   // 8 bits devoted to other functionality:
   // Bit 0: Request robot battery level
   // Bit 1: n/a 
@@ -200,6 +241,24 @@ void printDebugMessage(String message){
   }
 }
 
+/** getSelectedScrollValue(int scrollAnalogValue, int numSelectableValues)
+ * @param scrollAnalogValue the analogRead value of the scroll wheel
+ * @param numSelectableValues the number of selectable values
+ * @return an index of the selected value from 0 to @param numSelectableValues - 1
+*/
+int getSelectedScrollValue(int scrollAnalogValue, int minScrollValue, int maxScrollValue, int numSelectableValues){
+  return map(scrollAnalogValue, minScrollValue, maxScrollValue, 0, numSelectableValues-1);
+  //returns an index from 0 to max position - 1
+}
+
+int getRightScrollValue(){
+  return getSelectedScrollValue(analogRead(RScrollIn), RMinScrollValue, RMaxScrollValue, RNumSelectableScrollValues);
+}
+
+int getLeftScrollValue(){
+  return getSelectedScrollValue(analogRead(LScrollIn), LMinScrollValue, LMaxScrollValue, LNumSelectableScrollValues);
+}
+
 /** Checks if the inputs have changed and updates them if they have
  * Takes no input
  * @return true if something has changed, false if everything is same as before
@@ -222,20 +281,26 @@ bool inputsHaveChanged(){
     return true;
   }
 
-  //Buttons:
-  
+  //Scroll Wheels:--------------
+  int currentLeftIndex = getLeftScrollValue();
+  int currentRightIndex = getRightScrollValue();
+  byte currentScrollWheels = (byte)currentLeftIndex<<4 + currentRightIndex;
+  if(currentScrollWheels != dataPacket.scrollWheels){
+    return true;
+  }
+
+
+  //Buttons:--------------------
   //button A byte
-  uint8_t currentButtonAPresses = (byte)LJoystickButtonPressed<<7 + (byte)LOtherButton<<6 
+  byte currentButtonAPresses = (byte)LJoystickButtonPressed<<7 + (byte)LOtherButton<<6 
   + (byte)LTriggerPressed<<5 + (byte)LBumperPressed<<4 + (byte)RJoystickButtonPressed<<3
   + (byte)ROtherButton<<2 + (byte)RTriggerPressed<<1 + (byte)RBumperPressed;
-
   if(currentButtonAPresses != dataPacket.buttonsA){
     return true;
   }
 
   //buttonB byte
-  uint8_t currentButtonBPresses = (byte)centerButtonPressed;
-
+  byte currentButtonBPresses = (byte)centerButtonPressed;
   if(currentButtonBPresses != dataPacket.buttonsB){
     return true;
   }
@@ -276,6 +341,11 @@ void fillDataPacket(){
   } else{//if it's not within the deadzone
     dataPacket.RJy = RJoysticky;
   }
+
+  //Fill scroll wheels
+  int currentLeftIndex = getLeftScrollValue();
+  int currentRightIndex = getRightScrollValue();
+  dataPacket.scrollWheels = (byte)currentLeftIndex<<4 + currentRightIndex;
 
   //Fill buttonsA byte
   dataPacket.buttonsA = (byte)LJoystickButtonPressed<<7 + (byte)LOtherButton<<6 
